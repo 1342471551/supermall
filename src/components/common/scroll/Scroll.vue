@@ -23,16 +23,21 @@
       })
 
       //  2.监听滚动位置
-      this.scroll.on('scroll', position => {
-        // console.log(position);
-        this.$emit('scroll', position)
-      })
+      if (this.probeType === 2 || this.probeType === 3) {
+        this.scroll.on('scroll', position => {
+          // console.log(position);
+          this.$emit('scroll', position)
+        })
+      }
 
-      this.scroll.on('pullingUp', () => {
-        this.$emit('pullingUp')
-        // console.log("-------")
-        //加载完成 进行刷新 允许下次上拉
-      })
+      // 3.进行上拉加载更多
+      if (this.probeType === 2 || this.probeType === 3) {
+        this.scroll.on('pullingUp', () => {
+          this.$emit('pullingUp')
+          // console.log("-------")
+          //加载完成 进行刷新 允许下次上拉
+        })
+      }
     },
     data() {
       return {
@@ -43,8 +48,13 @@
       scrollTo(x, y, time = 300) {
         this.scroll.scrollTo(x, y, time)
       },
-      finishPullUp(){
+      finishPullUp() {
         this.scroll.finishPullUp()
+      },
+      refresh() {
+        //在执行刷新之前scroll对象还没有初始化完成
+        console.log('执行scroll刷新');
+        this.scroll && this.scroll.refresh()
       }
     },
     props: {

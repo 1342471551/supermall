@@ -5,13 +5,15 @@
         购物街
       </div>
     </nav-bar>
-
-    <Scroll class="content" ref="scroll" :probe-type="3" :pull-up-load="true" @scroll="contentScroll" @pullingUp="pullingUp">
-      <home-swiper :banners="banners"/>
+    <tab-control class="tab-control1" :titles="['流行','新款','精选']"
+                 @tabClick="tabClick" ref="topTab" v-show="isTabFixed"/>
+    <Scroll class="content" ref="scroll" :probe-type="3" :pull-up-load="true" @scroll="contentScroll"
+            @pullingUp="pullingUp">
+      <home-swiper :banners="banners" @swiperImageLoad="swiperImageLoad"/>
       <home-recommend-view :recommends="recommends"/>
       <feature-view/>
       <tab-control class="tab-control" :titles="['流行','新款','精选']"
-                   @tabClick="tabClick"/>
+                   @tabClick="tabClick" ref="tabControl"/>
       <goods-list :goods="showGoods"/>
     </Scroll>
     <!--    如果要监听一个组件的点击 需要添加.native(监听组件的根元素事件)-->
@@ -34,6 +36,9 @@
 
   //axios封装方法
   import {getHomeMultidata, getHomeGoods} from "network/home";
+
+  //公共工具类
+  import {debounce} from "common/utils";
 
   export default {
     name: "Home",
@@ -58,7 +63,10 @@
           'sell': {page: 0, list: []}
         },
         currentType: 'pop',
-        isShowBackTop: false
+        isShowBackTop: false,
+        tabOffsetTop: 0,
+        isTabFixed: false,
+        saveY: 0
       }
     },
     computed: {
@@ -75,6 +83,19 @@
       this.getHomeGoods('pop')
       this.getHomeGoods('new')
       this.getHomeGoods('sell')
+
+    },
+    mounted() {
+      //refresh 是debounce返回的一个新生成的函数
+      const refresh = debounce(this.$refs.scroll.refresh, 50)
+      //  监听item中图片加载完成 $bus是mainJs中自定义的原型实例 重新定义一个vue当作这个对象
+      this.$bus.$on('itemImageLoad', () => {
+        // console.log('sss')
+        refresh()
+      })
+      //  获取tabControl的offsetTop
+      //  所以组件都有一个$el 用于获取组件中的元素
+      console.log(this.$refs.tabControl.$el.offsetTop);
     },
     methods: {
       //事件监听相关
@@ -91,17 +112,27 @@
             this.currentType = 'sell'
             break
         }
+
+        this.$refs.tabControl.currentIndex = index
+        this.$refs.topTab.currentIndex = index
       },
       backClick() {
         console.log('ddd')
         this.$refs.scroll.scrollTo(0, 0)
       },
       contentScroll(position) {
+        //判断上滑按钮是否显示
         this.isShowBackTop = (-position.y) > 1000
+
+        //  判断tabcontrol是否吸顶
+        this.isTabFixed = (-position.y) > this.tabOffsetTop
       },
-      pullingUp(){
-        console.log("---");
+      pullingUp() {
+        console.log("请求服务器数据,上拉加载更多");
         this.getHomeGoods(this.currentType)
+      },
+      swiperImageLoad() {
+        this.tabOffsetTop = this.$refs.tabControl.$el.offsetTop
       },
 
       //网络请求相关
@@ -121,6 +152,19 @@
           this.$refs.scroll.finishPullUp()
         })
       }
+    },
+    //组件销毁调用
+    destroyed() {
+      console.log('销毁')
+    },
+    //返回这个组件调用(保存停留位置)
+    activated() {
+      this.$refs.scroll.scrollTo(0, this.saveY, 0)
+      this.$refs.scroll.refresh()
+    },
+    //离开这个组件调用(记录停留位置)
+    deactivated() {
+      this.saveY = this.$refs.scroll.y ? this.$refs.scroll.y : 0
     }
   }
 </script>
@@ -128,31 +172,29 @@
 <!--加上scoped 样式就只对当前页面生效-->
 <style scoped>
   #home {
-    /*padding-top: 44px;*/
     /* vh是视口高度 */
     height: 100vh;
+    position: relative;
   }
 
   .home-nav {
     background-color: var(--color-tint);
-    color: white;
-
-    position: fixed;
-    left: 0;
-    right: 0;
-    top: 0;
+    color: #fff;
+    position: relative;
     z-index: 9;
   }
 
-  .tab-control {
-    /*使这个type-bar可以根据滑动固定在屏幕上方*/
-    position: sticky;
-    top: 44px;
+  /*重新造一个导航栏替代原来的 对点击数据进行同步*/
+  .tab-control1 {
+    position: relative;
     z-index: 9;
   }
 
   .content {
-    height: calc(100% - 93px);
-    margin-top: 44px;
+    position: absolute;
+    top: 44px;
+    bottom: 49px;
+    left: 0;
+    right: 0;
   }
 </style>
