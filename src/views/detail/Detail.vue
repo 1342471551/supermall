@@ -1,23 +1,93 @@
 <template>
-  <div>
-    详情页
+  <div id="detail">
+    <DetailNavBar class="detail-nav"/>
+    <scroll class="content" ref="scroll">
+      <detail-swiper :top-images="topImages"/>
+      <detail-base-info :goods="goods"/>
+      <detail-shop-info :shop="shop"/>
+      <detail-goods-info :detailInfo="detailInfo" @imageLoad="imageLoad"/>
+      <detail-param-info :param-info="paramInfo"/>
+    </scroll>
   </div>
 </template>
 
 <script>
+  import DetailNavBar from "./childComps/DetailNavBar";
+  import DetailSwiper from "./childComps/DetailSwiper";
+  import DetailShopInfo from "./childComps/DetailShopInfo";
+  import DetailGoodsInfo from "./childComps/DetailGoodsInfo";
+  import DetailBaseInfo from "./childComps/DetailBaseInfo";
+  import DetailParamInfo from "./childComps/DetailParamInfo";
+
+  import Scroll from "components/common/scroll/Scroll";
+
+  import {getDetail, Shop, Goods,GoodsParam} from "../../network/detail";
+
   export default {
     name: "Detail",
+    components: {
+      DetailNavBar,
+      DetailSwiper,
+      DetailShopInfo,
+      DetailGoodsInfo,
+      DetailBaseInfo,
+      DetailParamInfo,
+      Scroll
+    },
     data() {
       return {
-        iid: null
+        iid: null,
+        topImages: [],
+        goods: {},
+        shop: {},
+        detailInfo:{},
+        paramInfo:{}
       }
     },
     created() {
       this.iid = this.$route.params.id
+
+      //  请求详情数据
+      getDetail(this.iid).then(res => {
+        // 1.获取数据
+        const data = res.result
+
+        //获取顶部轮播数据
+        this.topImages = data.itemInfo.topImages
+        // console.log(res)
+        // 3.获取商品信息
+        this.goods = new Goods(data.itemInfo, data.columns, data.shopInfo.services)
+        // 4.获取店铺信息
+        this.shop = new Shop(data.shopInfo)
+      //  保存商品详情
+        this.detailInfo=data.detailInfo
+      //  获取参数信息
+        this.paramInfo=new GoodsParam(data.itemParams.info,data.itemParams.rule)
+      })
+    },
+    methods:{
+      imageLoad(){
+        this.$refs.scroll.refresh()
+      }
     }
   }
 </script>
 
 <style scoped>
+  #detail {
+    position: relative;
+    z-index: 9;
+    background-color: #fff;
+    height: 100vh;
+  }
 
+  .content {
+    height: calc(100% - 44px);
+  }
+
+  .detail-nav {
+     position: relative;
+    z-index: 9;
+    background-color: #fff;
+  }
 </style>
