@@ -38,7 +38,7 @@
   import {getHomeMultidata, getHomeGoods} from "network/home";
 
   //公共工具类
-  import {debounce} from "common/utils";
+  import {itemListenerMixin} from "common/mixin";
 
   export default {
     name: "Home",
@@ -53,6 +53,7 @@
       Scroll,
       BackTop
     },
+    mixins:[itemListenerMixin],
     data() {
       return {
         banners: [],
@@ -66,7 +67,8 @@
         isShowBackTop: false,
         tabOffsetTop: 0,
         isTabFixed: false,
-        saveY: 0
+        saveY: 0,
+        ItemImgListener: null
       }
     },
     computed: {
@@ -86,16 +88,10 @@
 
     },
     mounted() {
-      //refresh 是debounce返回的一个新生成的函数
-      const refresh = debounce(this.$refs.scroll.refresh, 50)
-      //  监听item中图片加载完成 $bus是mainJs中自定义的原型实例 重新定义一个vue当作这个对象
-      this.$bus.$on('itemImageLoad', () => {
-        // console.log('sss')
-        refresh()
-      })
       //  获取tabControl的offsetTop
       //  所以组件都有一个$el 用于获取组件中的元素
       console.log(this.$refs.tabControl.$el.offsetTop);
+      console.log("混人home组件代码")
     },
     methods: {
       //事件监听相关
@@ -164,7 +160,10 @@
     },
     //离开这个组件调用(记录停留位置)
     deactivated() {
+      //保存滚动到到Y值
       this.saveY = this.$refs.scroll.y ? this.$refs.scroll.y : 0
+      //取消全局事件的监听
+      this.$bus.$off('itemImageLoad', this.ItemImgListener)
     }
   }
 </script>
